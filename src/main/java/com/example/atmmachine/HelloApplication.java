@@ -35,7 +35,7 @@ public class HelloApplication extends Application {
             throw new RuntimeException("Error loading MySQL JDBC driver", e);
         }
     }
-    private ObservableList<String> banks = FXCollections.observableArrayList("Bank A", "ABC Bank", "Bank C");
+
     private ComboBox<String> cityComboBox;
     private ComboBox<String> bankComboBox;
     private TextArea resultTextArea;
@@ -43,6 +43,14 @@ public class HelloApplication extends Application {
     private static final String JDBC_URL = "jdbc:mysql://localhost:3306/atm_database";
     private static final String USER = "root";
     private static final String PASSWORD = "2004";
+
+    Connection connection = DriverManager.getConnection(JDBC_URL, USER, PASSWORD);
+    private final ObservableList<String> banks = FXCollections.observableArrayList(getBanks());//("Bank A", "ABC Bank", "Bank C");
+    private final ObservableList<String> cities = FXCollections.observableArrayList(getCities());
+
+    public HelloApplication() throws SQLException {
+    }
+
 
     public static void main(String[] args) {
         launch(args);
@@ -58,9 +66,7 @@ public class HelloApplication extends Application {
         grid.setPadding(new Insets(20, 20, 20, 20));
 
         Label cityLabel = new Label("Current City:");
-        cityComboBox = new ComboBox<>();
-        // Add your actual city names
-        cityComboBox.getItems().addAll("City1", "Mumbai", "City3");
+        cityComboBox = new ComboBox<>(cities);
         cityComboBox.setPromptText("Select City");
 
         Label bankLabel = new Label("Bank Name:");
@@ -150,5 +156,32 @@ public class HelloApplication extends Application {
                 return atmBranches.toArray(new ATMBranch[0]);
             }
         }
+    }
+
+    private List<String> getBanks() throws SQLException{
+        List<String> banks = new ArrayList<>() ;
+        String query = "SELECT Distinct branch_name"+
+                " FROM atm_database.atmbranch" ;
+        try(PreparedStatement statement = connection.prepareStatement(query)){
+            ResultSet resultSet = statement.executeQuery();
+            while(resultSet.next()){
+                banks.add(resultSet.getString("branch_name"));
+            }
+        }catch(SQLException ignored){}
+        return banks ;
+
+
+    }
+    private List<String> getCities() throws SQLException{
+        List<String> cities = new ArrayList<>() ;
+        String query = "SELECT Distinct city_name"+
+                " FROM city" ;
+        try(PreparedStatement statement = connection.prepareStatement(query)){
+            ResultSet resultSet = statement.executeQuery();
+            while(resultSet.next()){
+                cities.add(resultSet.getString("city_name"));
+            }
+        }catch(SQLException ignored){}
+        return cities ;
     }
 }
