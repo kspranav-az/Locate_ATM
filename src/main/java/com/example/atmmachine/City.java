@@ -1,16 +1,19 @@
 package com.example.atmmachine;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ObservableValue;
+
 // City class
 public class City {
     private int cityId;
-    private String cityName;
-    private String state;
+    private SimpleStringProperty cityName;
+    private SimpleStringProperty state;
 
     // Constructors, getters, and setters
 
     public City(String cityName, String state) {
-        this.cityName = cityName;
-        this.state = state;
+        this.cityName = new SimpleStringProperty(cityName);
+        this.state = new SimpleStringProperty(state);
     }
 
     public int getCityId() {
@@ -22,18 +25,26 @@ public class City {
     }
 
     public String getCityName() {
-        return cityName;
+        return cityName.get();
     }
 
     public void setCityName(String cityName) {
-        this.cityName = cityName;
+        this.cityName.set(cityName);
+    }
+
+    public ObservableValue<String> cityNameProperty() {
+        return cityName;
     }
 
     public String getState() {
-        return state;
+        return state.get();
     }
 
     public void setState(String state) {
-        this.state = state;
+        this.state.set(state);
+    }
+
+    public ObservableValue<String> stateProperty() {
+        return state;
     }
 }

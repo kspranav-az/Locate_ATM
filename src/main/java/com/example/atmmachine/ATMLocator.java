@@ -3,7 +3,6 @@ package com.example.atmmachine;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -13,21 +12,11 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
-import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HelloApplication extends Application {
-//    @Override
-//    public void start(Stage stage) throws IOException {
-//        FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("hello-view.fxml"));
-//        Scene scene = new Scene(fxmlLoader.load(), 320, 240);
-//        stage.setTitle("Hello!");
-//        stage.setScene(scene);
-//        stage.show();
-//    }
-
+public class ATMLocator extends Application {
     static {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -45,12 +34,11 @@ public class HelloApplication extends Application {
     private static final String PASSWORD = "2004";
 
     Connection connection = DriverManager.getConnection(JDBC_URL, USER, PASSWORD);
-    private final ObservableList<String> banks = FXCollections.observableArrayList(getBanks());//("Bank A", "ABC Bank", "Bank C");
+    private final ObservableList<String> banks = FXCollections.observableArrayList(getBanks());
     private final ObservableList<String> cities = FXCollections.observableArrayList(getCities());
 
-    public HelloApplication() throws SQLException {
+    public ATMLocator() throws SQLException {
     }
-
 
     public static void main(String[] args) {
         launch(args);
@@ -65,6 +53,10 @@ public class HelloApplication extends Application {
         grid.setVgap(10);
         grid.setPadding(new Insets(20, 20, 20, 20));
 
+        Label titleLabel = new Label("ATM Search Form");
+        titleLabel.setStyle("-fx-font-size: 20; -fx-font-weight: bold; -fx-padding: 0 0 10 0;");
+        GridPane.setConstraints(titleLabel, 0, 0, 2, 1);
+
         Label cityLabel = new Label("Current City:");
         cityComboBox = new ComboBox<>(cities);
         cityComboBox.setPromptText("Select City");
@@ -74,19 +66,24 @@ public class HelloApplication extends Application {
         bankComboBox.setPromptText("Select Bank");
 
         Button searchButton = new Button("Search");
+        searchButton.getStyleClass().add("btn-primary");
         searchButton.setOnAction(e -> searchATMCenters());
 
         resultTextArea = new TextArea();
         resultTextArea.setEditable(false);
+        resultTextArea.setPrefHeight(150); // Adjust the height as needed
 
-        grid.add(cityLabel, 0, 0);
-        grid.add(cityComboBox, 1, 0);
-        grid.add(bankLabel, 0, 1);
-        grid.add(bankComboBox, 1, 1);
-        grid.add(searchButton, 0, 2);
-        grid.add(resultTextArea, 0, 3, 2, 1);
+        GridPane.setConstraints(cityLabel, 0, 1);
+        GridPane.setConstraints(cityComboBox, 1, 1);
+        GridPane.setConstraints(bankLabel, 0, 2);
+        GridPane.setConstraints(bankComboBox, 1, 2);
+        GridPane.setConstraints(searchButton, 0, 3, 2, 1);
+        GridPane.setConstraints(resultTextArea, 0, 4, 2, 1);
 
-        Scene scene = new Scene(grid, 400, 300);
+        grid.getChildren().addAll(titleLabel, cityLabel, cityComboBox, bankLabel, bankComboBox, searchButton, resultTextArea);
+
+        Scene scene = new Scene(grid, 400, 400);
+        scene.getStylesheets().add("org/kordamp/bootstrapfx/bootstrapfx.css"); // Add Bootstrap styles
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -101,10 +98,8 @@ public class HelloApplication extends Application {
         }
 
         try (Connection connection = DriverManager.getConnection(JDBC_URL, USER, PASSWORD)) {
-            // Perform database search based on selectedCity and selectedBank
             ATMBranch[] atmBranches = retrieveDataFromDatabase(connection, selectedCity, selectedBank);
 
-            // Display the results in the TextArea
             if (atmBranches != null && atmBranches.length > 0) {
                 StringBuilder resultText = new StringBuilder("ATM Centers in " + selectedCity + " for " + selectedBank + ":\n");
                 for (ATMBranch branch : atmBranches) {
@@ -114,6 +109,9 @@ public class HelloApplication extends Application {
                             .append(branch.getAddress().getCity().getState()).append("\n\n");
                 }
                 resultTextArea.setText(resultText.toString());
+
+                Result resultStage = new Result();
+                resultStage.start(new Stage(), selectedCity, selectedBank, connection);
             } else {
                 resultTextArea.setText("No ATM Centers found in " + selectedCity + " for " + selectedBank + ".");
             }
@@ -136,7 +134,7 @@ public class HelloApplication extends Application {
                 List<ATMBranch> atmBranches = new ArrayList<>();
 
                 while (resultSet.next()) {
-                    City branchCity = new City(resultSet.getString("city_name"), resultSet.getString("state_id"));
+                    City branchCity = new City(resultSet.getString("city_name"), resultSet.getString("state_name"));
 
                     Address branchAddress = new Address(
                             resultSet.getString("street"),
@@ -158,30 +156,31 @@ public class HelloApplication extends Application {
         }
     }
 
-    private List<String> getBanks() throws SQLException{
-        List<String> banks = new ArrayList<>() ;
-        String query = "SELECT Distinct branch_name"+
-                " FROM atm_database.atmbranch" ;
-        try(PreparedStatement statement = connection.prepareStatement(query)){
+    private List<String> getBanks() throws SQLException {
+        List<String> banks = new ArrayList<>();
+        String query = "SELECT Distinct branch_name" +
+                " FROM atm_database.atmbranch";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             ResultSet resultSet = statement.executeQuery();
-            while(resultSet.next()){
+            while (resultSet.next()) {
                 banks.add(resultSet.getString("branch_name"));
             }
-        }catch(SQLException ignored){}
-        return banks ;
-
-
+        } catch (SQLException ignored) {
+        }
+        return banks;
     }
-    private List<String> getCities() throws SQLException{
-        List<String> cities = new ArrayList<>() ;
-        String query = "SELECT Distinct city_name"+
-                " FROM city" ;
-        try(PreparedStatement statement = connection.prepareStatement(query)){
+
+    private List<String> getCities() throws SQLException {
+        List<String> cities = new ArrayList<>();
+        String query = "SELECT Distinct city_name" +
+                " FROM city";
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
             ResultSet resultSet = statement.executeQuery();
-            while(resultSet.next()){
+            while (resultSet.next()) {
                 cities.add(resultSet.getString("city_name"));
             }
-        }catch(SQLException ignored){}
-        return cities ;
+        } catch (SQLException ignored) {
+        }
+        return cities;
     }
 }

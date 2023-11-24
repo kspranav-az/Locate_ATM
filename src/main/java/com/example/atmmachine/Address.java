@@ -1,16 +1,19 @@
 package com.example.atmmachine;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ObservableValue;
+
 // Address class
 public class Address {
     private int addressId;
-    private String street;
+    private SimpleStringProperty street;
     private String zipCode;
     private City city;
 
     // Constructors, getters, and setters
 
     public Address(String street, String zipCode, City city) {
-        this.street = street;
+        this.street = new SimpleStringProperty(street);
         this.zipCode = zipCode;
         this.city = city;
     }
@@ -24,11 +27,15 @@ public class Address {
     }
 
     public String getStreet() {
-        return street;
+        return street.get();
     }
 
     public void setStreet(String street) {
-        this.street = street;
+        this.street.set(street);
+    }
+
+    public ObservableValue<String> streetProperty() {
+        return street;
     }
 
     public String getZipCode() {
